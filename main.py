@@ -35,7 +35,7 @@ def main():
         subprocess.run([
             "git",
             "clone",
-            "-d",
+            "--depth",
             "1",
             "https://github.com/Mojang/bedrock-samples.git",
             str(root),
