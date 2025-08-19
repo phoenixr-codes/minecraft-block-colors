@@ -1,5 +1,7 @@
 from itertools import *
+import json
 from pathlib import Path
+import fnmatch
 import subprocess
 import tempfile
 
@@ -42,16 +44,47 @@ def main():
         ])
 
     output.unlink(missing_ok=True)
-    with output.open("a") as f:
+    blacklist = list(filter(lambda line: not line.startswith("#"), Path("blacklist.txt").read_text().splitlines()))
+    with output.open("a") as out_file:
         blocks = root / "resource_pack" / "textures" / "blocks"
-        for file in blocks.iterdir():
+
+        with (root / "resource_pack" / "blocks.json").open("r") as f:
+            texture_map = json.load(f)
+
+        for block, data in texture_map.items():
+            if block == "format_version":
+              # not a block
+              continue
+            continue_outer = False
+            for pattern in blacklist:
+                if fnmatch.fnmatch(block, pattern):
+                    # block in blacklist
+                    continue_outer = True
+            if continue_outer:
+                continue
+            texture = data.get("textures")
+            if texture is None:
+                # skip textureless
+                continue
+            if isinstance(texture, dict):
+                # skip blocks with multiple textures
+                continue
+            file = (blocks / texture).with_suffix(".png")
             if not file.is_file() or file.suffix != ".png":
                 continue
-            im = Image.open(file).convert("RGBA")
+            im = Image.open(file)
+            if im.has_transparency_data:
+                # skip blocks with transparency
+                continue
+            if im.width != im.height:
+                # skip non-square textures
+                continue
+            im = im.convert("RGBA")
             avg = rgb_as_hex(avg_color(im))
             file_name = file.name
             
-            f.write(f"#{avg} {file_name}\n")
+            out_file.write(f"#{avg} {block}\n")
+
 
 if __name__ == "__main__":
     main()

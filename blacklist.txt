@@ -1,0 +1,9 @@
+*_carpet
+*_pressure_plate
+*_sign
+*_button
+*_fence
+*_fence_gate
+*_wall
+*_slab
+*_stairs
